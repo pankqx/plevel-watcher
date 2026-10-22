@@ -144,6 +144,16 @@ test('Enter on a plevel comment -> diff -> Apply writes the code', async () => {
   env.server.close();
 });
 
+test('works in an unsaved (untitled) tab too', async () => {
+  const env = await setup('Apply');
+  const doc = new env.Doc('Untitled-1', '#plevel:write add');
+  doc.uri.scheme = 'untitled';
+  env.docs.push(doc);
+  await pressEnterOn(env, doc, 0);
+  assert.match(doc.getText(), /def add\(a, b\):/);
+  env.server.close();
+});
+
 test('Discard leaves the file untouched', async () => {
   const env = await setup('Discard');
   const doc = new env.Doc('app.py', '# plevel: write add');

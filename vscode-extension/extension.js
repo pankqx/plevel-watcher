@@ -174,7 +174,7 @@ function activate(context) {
 
   context.subscriptions.push(vscode.workspace.onDidChangeTextDocument((e) => {
     if (!cfg().enabled || e.reason || running) return;          // reason is set for undo/redo
-    if (e.document.uri.scheme !== 'file') return;
+    if (!['file', 'untitled'].includes(e.document.uri.scheme)) return;   // saved files and new unsaved tabs
     for (const ch of e.contentChanges) {
       if (!isEnterKey(ch)) continue;
       const line = ch.range.start.line;
