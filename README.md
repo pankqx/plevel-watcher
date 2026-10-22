@@ -21,11 +21,44 @@ If you have both running, the extension creates `.plevel/busy` while it works so
 cd ~/Projects
 git clone https://github.com/pankqx/plevel-watcher
 cd plevel-watcher
-./install.sh            # adds `plevel-watch` and links the VS Code extension
+./install.sh
 ollama pull qwen2.5-coder:1.5b
 ```
-Restart VS Code. If the extension does not show up, try it in a throwaway window first: `code --extensionDevelopmentPath ~/Projects/plevel-watcher/vscode-extension ~/some-project`. You need Python 3.9+ (standard library only) and Node is **not** required to use the extension.
-Update later with `git pull`.
+`install.sh` adds the `plevel-watch` terminal command and installs the VS Code extension (it builds a `.vsix` and runs `code --install-extension`). **Fully quit VS Code and open it again.** You should see **✨ Plevel** in the bottom-right status bar.
+
+Check it: `code --list-extensions | grep plevel` prints `pankqx.plevel-watcher`.
+Needs Python 3.9+ (standard library only). Node is not needed to use it.
+
+If the `code` command is missing, the script prints a `.vsix` path: in VS Code open Extensions → `⋯` menu → **Install from VSIX…** and pick it.
+If it still does not load, use the no-install fallback: `~/Projects/plevel-watcher/code-plevel.sh ~/Projects/my-project` (opens VS Code with Plevel loaded straight from the folder; the window is labelled "Extension Development Host").
+
+## Update
+```bash
+cd ~/Projects/plevel-watcher && git pull && ./install.sh
+```
+Then restart VS Code.
+
+## Turn off / on (without deleting)
+- **Quick toggle:** click **Plevel** in the bottom-right status bar (it shows "Plevel off" when disabled), or Ctrl+Shift+P → **Plevel: Turn on/off**, or untick the `plevel.enabled` setting.
+- **Disable the extension:** Extensions panel → Plevel Watcher → **Disable** (or **Disable (Workspace)** for one project only).
+- **Terminal watcher:** press **Ctrl+C**, or close its terminal. It only runs while that terminal is open.
+- Nothing runs when idle. The model is loaded by Ollama only while answering and freed after about 5 minutes.
+
+## Uninstall (delete)
+```bash
+cd ~/Projects/plevel-watcher && ./uninstall.sh     # removes the extension and the terminal commands
+rm -rf ~/Projects/plevel-watcher                    # optional: delete the source
+```
+Or by hand: Extensions panel → Plevel Watcher → **Uninstall**; `code --uninstall-extension pankqx.plevel-watcher`. Quit and reopen VS Code afterwards. Your projects are never modified by uninstalling; you may delete leftover `.plevel/` folders.
+
+## Troubleshooting
+| Symptom | Fix |
+|---|---|
+| No **✨ Plevel** in the status bar | Run `./install.sh`, fully quit VS Code (not just reload), reopen. Check `code --list-extensions \| grep plevel`. Use `code-plevel.sh` as a fallback. |
+| Enter does nothing | The comment must start the line: `# plevel: task`. If the suggestion popup is open, press **Ctrl+Alt+P** on the line. Make sure the status bar does not say "Plevel off". |
+| "Is Ollama running?" error | `sudo systemctl start ollama`, then try again. `ollama list` must show your model. |
+| Code appears with Tab, no diff | That is Continue's ghost-text autocomplete, not Plevel. Plevel always shows "thinking…" and a diff. |
+| Slow first answer | The model is loading into the GPU. Later answers are faster. |
 
 ## Use
 
