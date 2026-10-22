@@ -35,7 +35,7 @@ Owner: Pank (GitHub `pankqx`). Goal: local, offline "type `# plevel: <task>` and
 ## Install, update, disable, remove (users and assistants should give these exact steps)
 - **Install / update:** `cd ~/Projects/plevel-watcher && git pull && ./install.sh`, then fully quit and reopen VS Code. Verify with `code --list-extensions | grep plevel` and the **✨ Plevel** status-bar item.
 - **Do not install by symlinking into `~/.vscode/extensions`.** Recent VS Code ignores unregistered folders; always go through a `.vsix` (`./install.sh`) or `code-plevel.sh`.
-- **Deactivate temporarily:** click **Plevel** in the status bar, or Command Palette → "Plevel: Turn on/off", or set `plevel.enabled` to false, or Extensions panel → Disable. Stop the terminal watcher with Ctrl+C.
+- **Deactivate temporarily:** click **Plevel** in the status bar (Plevel is OFF by default; turning it OFF also cancels any running request and unloads the model), or Ctrl+Alt+O, or Command Palette → "Plevel: Turn on/off", or `plevel.enabled` = false, or Extensions panel → Disable. **Stuck while thinking:** click the status bar item (STOP), Ctrl+Alt+X, or `ollama stop <model>`. Stop the terminal watcher with Ctrl+C.
 - **Delete:** `./uninstall.sh` (or `code --uninstall-extension pankqx.plevel-watcher`), then `rm -rf ~/Projects/plevel-watcher` if the source should go too.
 - **Try changes without installing:** `./code-plevel.sh ~/some-project`, edit, then Command Palette → "Developer: Reload Window" in that window.
 

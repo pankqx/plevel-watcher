@@ -38,11 +38,16 @@ cd ~/Projects/plevel-watcher && git pull && ./install.sh
 ```
 Then restart VS Code.
 
-## Turn off / on (without deleting)
-- **Quick toggle:** click **Plevel** in the bottom-right status bar (it shows "Plevel off" when disabled), or Ctrl+Shift+P → **Plevel: Turn on/off**, or untick the `plevel.enabled` setting.
-- **Disable the extension:** Extensions panel → Plevel Watcher → **Disable** (or **Disable (Workspace)** for one project only).
-- **Terminal watcher:** press **Ctrl+C**, or close its terminal. It only runs while that terminal is open.
-- Nothing runs when idle. The model is loaded by Ollama only while answering and freed after about 5 minutes.
+## The ON/OFF button (bottom-right status bar)
+Plevel starts **OFF** and does nothing until you switch it on, so it never surprises you.
+- **○ Plevel OFF** → click it to turn **ON** (**✨ Plevel ON**, highlighted). Click again to turn OFF.
+- While it is answering the button shows **Plevel thinking… (click to STOP)**. Click it to stop immediately.
+- Turning OFF or pressing STOP cancels the request **and tells Ollama to unload the model**, which frees your GPU memory at once.
+- Shortcuts: **Ctrl+Alt+O** on/off, **Ctrl+Alt+X** stop, **Ctrl+Alt+P** run on the current line.
+- A request that gets no answer for 3 minutes is stopped automatically, and answers are capped at 1024 tokens (`plevel.maxTokens`).
+- Other ways: Extensions panel → Plevel Watcher → **Disable** (or **Disable (Workspace)**). Terminal watcher: **Ctrl+C** or close its terminal.
+- If it ever seems stuck, run `ollama stop qwen2.5-coder:1.5b`, or `sudo systemctl restart ollama`.
+- Nothing runs when idle. Ollama frees the model about 5 minutes after the last answer.
 
 ## Uninstall (delete)
 ```bash
@@ -54,7 +59,8 @@ Or by hand: Extensions panel → Plevel Watcher → **Uninstall**; `code --unins
 ## Troubleshooting
 | Symptom | Fix |
 |---|---|
-| No **✨ Plevel** in the status bar | Run `./install.sh`, fully quit VS Code (not just reload), reopen. Check `code --list-extensions \| grep plevel`. Use `code-plevel.sh` as a fallback. |
+| Status bar says **Plevel OFF** | That is the default. Click it once to turn ON. |
+| No Plevel item at all in the status bar | Run `./install.sh`, fully quit VS Code (not just reload), reopen. Check `code --list-extensions \| grep plevel`. Use `code-plevel.sh` as a fallback. |
 | Enter does nothing | The comment must start the line: `# plevel: task`. If the suggestion popup is open, press **Ctrl+Alt+P** on the line. Make sure the status bar does not say "Plevel off". |
 | "Is Ollama running?" error | `sudo systemctl start ollama`, then try again. `ollama list` must show your model. |
 | Code appears with Tab, no diff | That is Continue's ghost-text autocomplete, not Plevel. Plevel always shows "thinking…" and a diff. |
@@ -74,7 +80,7 @@ plevel-watch --keep-comment        # keep your comment above the generated code
 Or Command Palette → **Plevel: Start project watcher in terminal**.
 
 ### Settings (VS Code → Settings → "plevel")
-`plevel.model`, `plevel.host`, `plevel.approval` (`diff` or `direct`), `plevel.keepComment`, `plevel.temperature`, `plevel.numCtx`, `plevel.enabled`. Command **Plevel: Choose model** lists your installed models.
+`plevel.model`, `plevel.host`, `plevel.approval` (`diff` or `direct`), `plevel.keepComment`, `plevel.temperature`, `plevel.numCtx`, `plevel.enabled` (default off), `plevel.maxTokens`. Command **Plevel: Choose model** lists your installed models.
 
 ## How it decides what to write
 It sends the model your file (the comment is marked, big files are windowed), a list of project files and, in the watcher, the most relevant snippets from other files (keyword search, same engine as the Plevel chat app). The extension also sends the first lines of your other open tabs. Nothing leaves your machine.

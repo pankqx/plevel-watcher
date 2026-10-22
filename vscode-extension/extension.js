@@ -14,11 +14,12 @@ const proposals = new Map(); // uri string -> proposed file text
 function cfg() {
   const c = vscode.workspace.getConfiguration('plevel');
   return {
-    enabled: c.get('enabled', true),
+    enabled: c.get('enabled', false),
     host: c.get('host', 'http://127.0.0.1:11434'),
     model: c.get('model', 'qwen2.5-coder:1.5b'),
     temperature: c.get('temperature', 0.2),
     numCtx: c.get('numCtx', 4096),
+    maxTokens: c.get('maxTokens', 1024),
     approval: c.get('approval', 'diff'),
     keepComment: c.get('keepComment', false),
     watcherCommand: c.get('watcherCommand', 'plevel-watch'),
@@ -28,14 +29,38 @@ function cfg() {
 function updateStatus(state) {
   const c = cfg();
   if (state === 'working') {
-    statusItem.text = '$(sync~spin) Plevel thinking… (click to cancel)';
-    statusItem.command = 'plevel.cancel';
-  } else {
-    statusItem.text = c.enabled ? '$(sparkle) Plevel' : '$(circle-slash) Plevel off';
+    statusItem.text = '$(sync~spin) Plevel thinking… (click to STOP)';
+    statusItem.command = 'plevel.stop';
+    statusItem.tooltip = 'Click to stop the current request';
+  } else if (c.enabled) {
+    statusItem.text = '$(sparkle) Plevel ON';
     statusItem.command = 'plevel.toggle';
+    statusItem.tooltip = `Plevel is ON (${c.model}). Type "# plevel: <task>" and press Enter. Click to turn OFF.`;
+  } else {
+    statusItem.text = '$(circle-slash) Plevel OFF';
+    statusItem.command = 'plevel.toggle';
+    statusItem.tooltip = 'Plevel is OFF and does nothing. Click to turn it ON.';
   }
-  statusItem.tooltip = `Plevel · ${c.model} · type "# plevel: <task>" and press Enter`;
+  if (vscode.ThemeColor) {
+    statusItem.backgroundColor = state !== 'working' && !c.enabled ? undefined : new vscode.ThemeColor('statusBarItem.warningBackground');
+  }
   statusItem.show();
+}
+
+/** Ask Ollama to drop the model from GPU memory right away (best effort). */
+async function unloadModel() {
+  const c = cfg();
+  try {
+    await fetch(c.host.replace(/\/$/, '') + '/api/generate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: c.model, keep_alive: 0 }),
+    });
+  } catch (e) { /* Ollama not running: nothing to unload */ }
+}
+
+function stopEverything() {
+  if (running) running.abort.abort();
+  return unloadModel();
 }
 
 function workspaceRoot(doc) {
@@ -66,6 +91,7 @@ async function gatherContext(doc) {
   return out;
 }
 
+const REQUEST_TIMEOUT_MS = 3 * 60 * 1000; // never stay in "thinking" longer than this
 const APPROVAL_TIMEOUT_MS = 5 * 60 * 1000; // same as the watcher's lock TTL
 
 async function closeProposalTab(uri) {
@@ -123,6 +149,8 @@ async function run(doc, line) {
   const root = workspaceRoot(doc);
   const abort = new AbortController();
   running = { abort };
+  const watchdog = setTimeout(() => { timedOut = true; abort.abort(); }, REQUEST_TIMEOUT_MS);
+  let timedOut = false;
   setLock(root, true);
   updateStatus('working');
   try {
@@ -132,7 +160,7 @@ async function run(doc, line) {
       tree: ctx.tree, others: ctx.others,
     });
     const reply = await core.streamChat({
-      host: c.host, model: c.model, messages, temperature: c.temperature, numCtx: c.numCtx, signal: abort.signal,
+      host: c.host, model: c.model, messages, temperature: c.temperature, numCtx: c.numCtx, maxTokens: c.maxTokens, signal: abort.signal,
     });
     const code = core.extractCode(reply);
     if (!code.trim()) throw new Error('the model returned nothing');
@@ -145,13 +173,15 @@ async function run(doc, line) {
       if (ok) await writeIntoDocument(doc, line, parsed.raw, code, c.keepComment);
     }
   } catch (err) {
-    if (err && err.name === 'AbortError') vscode.window.setStatusBarMessage('Plevel: cancelled', 3000);
+    if (err && err.name === 'AbortError' && timedOut) vscode.window.showErrorMessage('Plevel: no answer after 3 minutes, stopped. Is the model too big or Ollama busy? Try plevel.model = qwen2.5-coder:1.5b.');
+    else if (err && err.name === 'AbortError') vscode.window.setStatusBarMessage('Plevel: stopped', 3000);
     else {
       const msg = String(err && err.message || err);
       const hint = /fetch failed|ECONNREFUSED/i.test(msg) ? ' Is Ollama running? (sudo systemctl start ollama)' : '';
       vscode.window.showErrorMessage(`Plevel: ${msg}${hint}`);
     }
   } finally {
+    clearTimeout(watchdog);
     running = null;
     setLock(root, false);
     updateStatus('idle');
@@ -193,11 +223,16 @@ function activate(context) {
     if (ed) run(ed.document, ed.selection.active.line);
   });
   reg('plevel.cancel', () => { if (running) running.abort.abort(); });
+  reg('plevel.stop', async () => {
+    await stopEverything();
+    vscode.window.setStatusBarMessage('Plevel: stopped and model unloaded', 3000);
+  });
   reg('plevel.toggle', async () => {
     const on = !cfg().enabled;
     await vscode.workspace.getConfiguration('plevel').update('enabled', on, vscode.ConfigurationTarget.Global);
-    updateStatus('idle');
-    vscode.window.setStatusBarMessage(`Plevel ${on ? 'on' : 'off'}`, 3000);
+    if (!on) await stopEverything();      // turning off also cancels work and frees the GPU
+    updateStatus(running ? 'working' : 'idle');
+    vscode.window.setStatusBarMessage(`Plevel ${on ? 'ON' : 'OFF'}`, 3000);
   });
   reg('plevel.pickModel', async () => {
     const c = cfg();
@@ -225,6 +260,6 @@ function activate(context) {
   }));
 }
 
-function deactivate() { if (running) running.abort.abort(); }
+function deactivate() { return stopEverything(); }
 
 module.exports = { activate, deactivate, isEnterKey };

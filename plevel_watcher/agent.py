@@ -151,9 +151,11 @@ def unified_diff(old: str, new: str, path: str) -> str:
 
 # ------------------------------------------------------------------ ollama
 def chat_stream(model: str, messages: list[dict], host: str = DEFAULT_HOST,
-                temperature: float = 0.2, num_ctx: int = 4096, timeout: float = 300) -> Iterator[str]:
+                temperature: float = 0.2, num_ctx: int = 4096, timeout: float = 180,
+                num_predict: int = 1024) -> Iterator[str]:
     body = json.dumps({"model": model, "messages": messages, "stream": True,
-                       "options": {"temperature": temperature, "num_ctx": num_ctx}}).encode()
+                       "options": {"temperature": temperature, "num_ctx": num_ctx,
+                                   "num_predict": num_predict}}).encode()
     req = urllib.request.Request(host.rstrip("/") + "/api/chat", data=body,
                                  headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=timeout) as resp:

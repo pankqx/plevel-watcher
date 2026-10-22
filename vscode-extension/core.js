@@ -104,12 +104,12 @@ function buildMessages(info) {
 }
 
 /** Streams a chat reply from Ollama. Returns the full text. `fetchImpl` and `signal` are injectable. */
-async function streamChat({ host, model, messages, temperature, numCtx, signal, onToken, fetchImpl }) {
+async function streamChat({ host, model, messages, temperature, numCtx, maxTokens, signal, onToken, fetchImpl }) {
   const f = fetchImpl || fetch;
   const res = await f(host.replace(/\/$/, '') + '/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, messages, stream: true, options: { temperature, num_ctx: numCtx } }),
+    body: JSON.stringify({ model, messages, stream: true, options: { temperature, num_ctx: numCtx, num_predict: maxTokens || 1024 } }),
     signal,
   });
   if (!res.ok) {
