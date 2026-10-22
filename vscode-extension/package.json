@@ -1,0 +1,37 @@
+{
+  "name": "plevel-watcher",
+  "displayName": "Plevel Watcher",
+  "description": "Type `# plevel: <task>` and press Enter: a local Ollama model writes the code. Offline, with diff approval.",
+  "version": "0.1.0",
+  "publisher": "pankqx",
+  "license": "MIT",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Programming Languages", "Machine Learning", "Other"],
+  "main": "./extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "commands": [
+      { "command": "plevel.run", "title": "Plevel: Run on this line" },
+      { "command": "plevel.cancel", "title": "Plevel: Cancel current request" },
+      { "command": "plevel.toggle", "title": "Plevel: Turn on/off" },
+      { "command": "plevel.pickModel", "title": "Plevel: Choose model" },
+      { "command": "plevel.startWatcher", "title": "Plevel: Start project watcher in terminal" }
+    ],
+    "keybindings": [
+      { "command": "plevel.run", "key": "ctrl+alt+p", "when": "editorTextFocus" }
+    ],
+    "configuration": {
+      "title": "Plevel",
+      "properties": {
+        "plevel.enabled": { "type": "boolean", "default": true, "description": "React to `# plevel:` comments when you press Enter." },
+        "plevel.host": { "type": "string", "default": "http://127.0.0.1:11434", "description": "Ollama server address." },
+        "plevel.model": { "type": "string", "default": "qwen2.5-coder:1.5b", "description": "Ollama model used to write code." },
+        "plevel.temperature": { "type": "number", "default": 0.2, "description": "Lower is more predictable." },
+        "plevel.numCtx": { "type": "number", "default": 4096, "description": "Context window in tokens." },
+        "plevel.approval": { "type": "string", "enum": ["diff", "direct"], "default": "diff", "description": "diff: show a diff and ask first. direct: write immediately (use git as your undo)." },
+        "plevel.keepComment": { "type": "boolean", "default": false, "description": "Keep the `# plevel:` comment above the generated code." },
+        "plevel.watcherCommand": { "type": "string", "default": "plevel-watch", "description": "Command that starts the terminal watcher." }
+      }
+    }
+  }
+}

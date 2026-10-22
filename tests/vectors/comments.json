@@ -1,0 +1,32 @@
+{
+  "matches": [
+    {"line": "# plevel: write a prime checker", "indent": "", "task": "write a prime checker"},
+    {"line": "#plevel: write me a python program", "indent": "", "task": "write me a python program"},
+    {"line": "    // PLEVEL: add a retry loop", "indent": "    ", "task": "add a retry loop"},
+    {"line": "\t-- plevel : select top 5 users", "indent": "\t", "task": "select top 5 users"},
+    {"line": "<!-- plevel: add a navbar -->", "indent": "", "task": "add a navbar"},
+    {"line": "/* plevel: debounce this */", "indent": "", "task": "debounce this"}
+  ],
+  "non_matches": [
+    "print('plevel: hello')",
+    "x = 1  # plevel: not at line start",
+    "# plevel:",
+    "# plevel:    ",
+    "# my plevel: idea",
+    "plevel: no comment marker"
+  ],
+  "extract": [
+    {"reply": "```python\ndef f():\n    return 1\n```\nHope this helps", "code": "def f():\n    return 1"},
+    {"reply": "Sure!\n```js\nconst a = 1;\n```", "code": "const a = 1;"},
+    {"reply": "```python\nprint('unclosed')", "code": "print('unclosed')"},
+    {"reply": "x = 1", "code": "x = 1"},
+    {"reply": "```\none\n```\n```\ntwo\n```", "code": "one"}
+  ],
+  "apply": [
+    {"text": "a = 1\n# plevel: add b\nc = 3", "line": 1, "code": "b = 2", "keep": false, "out": "a = 1\nb = 2\nc = 3"},
+    {"text": "def f():\n    # plevel: body\n    pass", "line": 1, "code": "x = 1\nif x:\n    return x", "keep": false,
+     "out": "def f():\n    x = 1\n    if x:\n        return x\n    pass"},
+    {"text": "# plevel: hi", "line": 0, "code": "print('hi')", "keep": true, "out": "# plevel: hi\nprint('hi')"},
+    {"text": "    x = 1\n    // plevel: more\n", "line": 1, "code": "    y = 2\n    z = 3", "keep": false, "out": "    x = 1\n    y = 2\n    z = 3\n"}
+  ]
+}

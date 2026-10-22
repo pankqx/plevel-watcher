@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.venv/
+.plevel/
+node_modules/
+*.vsix
