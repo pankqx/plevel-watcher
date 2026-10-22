@@ -66,13 +66,35 @@ async function gatherContext(doc) {
   return out;
 }
 
+const APPROVAL_TIMEOUT_MS = 5 * 60 * 1000; // same as the watcher's lock TTL
+
+async function closeProposalTab(uri) {
+  try {
+    for (const group of vscode.window.tabGroups.all) {
+      for (const tab of group.tabs) {
+        const input = tab.input;
+        if (input instanceof vscode.TabInputTextDiff && input.modified.toString() === uri.toString()) {
+          await vscode.window.tabGroups.close(tab);
+        }
+      }
+    }
+  } catch (e) { /* closing the diff is a nicety only */ }
+}
+
 async function showProposal(doc, newText, lineCount) {
   const uri = vscode.Uri.parse(`${SCHEME}:/${path.basename(doc.uri.fsPath)}?${Date.now()}`);
   proposals.set(uri.toString(), newText);
   await vscode.commands.executeCommand('vscode.diff', doc.uri, uri, `Plevel: proposed change to ${path.basename(doc.uri.fsPath)}`);
-  const choice = await vscode.window.showInformationMessage(
-    `Plevel wrote ${lineCount} line${lineCount === 1 ? '' : 's'}. Apply this change?`, 'Apply', 'Discard');
+  let timer;
+  const timeout = new Promise((resolve) => { timer = setTimeout(() => resolve(undefined), APPROVAL_TIMEOUT_MS); });
+  const choice = await Promise.race([
+    vscode.window.showInformationMessage(
+      `Plevel wrote ${lineCount} line${lineCount === 1 ? '' : 's'}. Apply this change?`, 'Apply', 'Discard'),
+    timeout,
+  ]);
+  clearTimeout(timer);
   proposals.delete(uri.toString());
+  await closeProposalTab(uri);
   return choice === 'Apply';
 }
 

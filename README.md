@@ -24,7 +24,7 @@ cd plevel-watcher
 ./install.sh            # adds `plevel-watch` and links the VS Code extension
 ollama pull qwen2.5-coder:1.5b
 ```
-Restart VS Code. You need Python 3.9+ (standard library only) and Node is **not** required to use the extension.
+Restart VS Code. If the extension does not show up, try it in a throwaway window first: `code --extensionDevelopmentPath ~/Projects/plevel-watcher/vscode-extension ~/some-project`. You need Python 3.9+ (standard library only) and Node is **not** required to use the extension.
 Update later with `git pull`.
 
 ## Use

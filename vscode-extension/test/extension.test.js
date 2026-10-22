@@ -31,12 +31,15 @@ function makeVscode(root, host, choices) {
   const handlers = {};
   const commands = {};
   const executed = [];
+  const tabs = [];
   const messages = [];
   const config = { enabled: true, host, model: 'm', temperature: 0.2, numCtx: 4096, approval: 'diff', keepComment: false, watcherCommand: 'plevel-watch' };
   class Position { constructor(l, c) { this.line = l; this.character = c; } }
   class Range { constructor(a, b, c, d) { this.start = new Position(a, b); this.end = new Position(c, d); this.isEmpty = a === c && b === d; } }
   class WorkspaceEdit { constructor() { this.edits = []; } replace(uri, range, text) { this.edits.push({ uri, range, text }); } }
   const docs = [];
+  const closedTabs = [];
+  class TabInputTextDiff { constructor(o, m) { this.original = o; this.modified = m; } }
   class Doc {
     constructor(name, text) { this.uri = { scheme: 'file', fsPath: path.join(root, name), toString: () => 'file://' + path.join(root, name) }; this.lines = text.split('\n'); }
     get lineCount() { return this.lines.length; }
@@ -45,7 +48,7 @@ function makeVscode(root, host, choices) {
   }
   const vscode = {
     Uri: { parse: (s) => ({ scheme: s.split(':')[0], fsPath: s, toString: () => s }) },
-    Range, Position, WorkspaceEdit,
+    Range, Position, WorkspaceEdit, TabInputTextDiff,
     StatusBarAlignment: { Right: 2 }, ConfigurationTarget: { Global: 1 },
     workspace: {
       workspaceFolders: [{ uri: { fsPath: root } }],
@@ -76,15 +79,19 @@ function makeVscode(root, host, choices) {
       setStatusBarMessage: () => {},
       createTerminal: (o) => { const t = { sent: [], opts: o, show() {}, sendText(x) { t.sent.push(x); } }; vscode.window.terminals.push(t); return t; },
       terminals: [],
+      tabGroups: { get all() { return [{ tabs }]; }, close: async (tab) => { closedTabs.push(tab); tabs.splice(tabs.indexOf(tab), 1); } },
       showQuickPick: async () => undefined,
       activeTextEditor: null,
     },
     commands: {
       registerCommand: (id, fn) => { commands[id] = fn; return { dispose() {} }; },
-      executeCommand: async (...a) => { executed.push(a); },
+      executeCommand: async (...a) => {
+        executed.push(a);
+        if (a[0] === 'vscode.diff') tabs.push({ input: new TabInputTextDiff(a[1], a[2]) });
+      },
     },
   };
-  return { vscode, handlers, commands, executed, messages, config, docs, Doc };
+  return { vscode, handlers, commands, executed, messages, config, docs, Doc, closedTabs, tabs };
 }
 
 async function setup(choice, reply) {
@@ -126,6 +133,7 @@ test('Enter on a plevel comment -> diff -> Apply writes the code', async () => {
   const proposed = env.handlers.provider.provideTextDocumentContent({ toString: () => env.executed[0][2].toString() });
   void proposed;
   assert.match(env.messages[0], /Apply this change/);
+  assert.strictEqual(env.closedTabs.length, 1, 'diff tab is closed after the decision');
   const text = doc.getText();
   assert.match(text, /def add\(a, b\):\n    return a \+ b/);
   assert.ok(!text.includes('plevel:'), text);
